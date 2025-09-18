@@ -4,6 +4,7 @@ import com.github.retrooper.packetevents.event.PacketSendEvent
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEffect
 import me.spartacus04.jext.JextState.LANG
+import me.spartacus04.jext.JextState.PLUGIN
 import me.spartacus04.jext.JextState.SCHEDULER
 import me.spartacus04.jext.discs.Disc
 import me.spartacus04.jext.listeners.utils.JextPacketListener
@@ -25,17 +26,22 @@ internal class RecordPacketEvent : JextPacketListener() {
 
         val player = event.getPlayer<Player>()
 
-        val position = packet.position.toVector3d()
+        // Check if plugin is enabled before scheduling tasks
+        if (!PLUGIN.isEnabled) return
 
-        SCHEDULER.runTaskLater({
-            val block = Location(player.world, position.x, position.y, position.z).block
+        val position = packet.position.toVector3d()
+        val location = Location(player.world, position.x, position.y, position.z)
+
+        // Use synchronous task with region-specific scheduling for Folia compatibility
+        SCHEDULER.runTask {
+            val block = location.block
             val blockState = block.state
 
-            if (blockState !is Jukebox) return@runTaskLater
-            val disc = Disc.fromItemstack(blockState.record) ?: return@runTaskLater
+            if (blockState !is Jukebox) return@runTask
+            val disc = Disc.fromItemstack(blockState.record) ?: return@runTask
 
             actionBarDisplay(player, disc)
-        }, 1)
+        }
 
     }
 
